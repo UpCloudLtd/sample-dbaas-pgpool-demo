@@ -2,10 +2,11 @@ resource "upcloud_server" "proxy-server" {
   hostname   = "pgpool-proxy"
   zone       = var.zone
   plan       = var.pgpool_proxy_plan
+  metadata   = true
   depends_on = [var.private_sdn_network, var.dbaas_pgsql_hosts]
 
   template {
-    storage = "Ubuntu Server 20.04 LTS (Focal Fossa)"
+    storage = "Ubuntu Server 22.04 LTS (Jammy Jellyfish)"
     size    = 25
   }
 
@@ -36,9 +37,10 @@ resource "upcloud_server" "proxy-server" {
 
   provisioner "remote-exec" {
     inline = [
+      "export DEBIAN_FRONTEND=noninteractive",
       "apt-get update",
-      "apt-get -y upgrade",
-      "apt-get -y install pgpool2 postgresql-client memcached",
+      "apt-get -o 'Dpkg::Options::=--force-confold' -q -y upgrade",
+      "apt-get -o 'Dpkg::Options::=--force-confold' -q -y install pgpool2 postgresql-client memcached",
       "systemctl enable --now pgpool2"
     ]
   }

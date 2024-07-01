@@ -3,7 +3,7 @@ resource "upcloud_server" "proxy-server" {
   zone       = var.zone
   plan       = var.pgpool_proxy_plan
   metadata   = true
-  depends_on = [var.private_sdn_network, var.dbaas_pgsql_hosts]
+  depends_on = [var.private_sdn_network, var.private_sdn_network_be, var.dbaas_pgsql_hosts]
 
   template {
     storage = "Ubuntu Server 22.04 LTS (Jammy Jellyfish)"
@@ -13,12 +13,14 @@ resource "upcloud_server" "proxy-server" {
   network_interface {
     type = "public"
   }
-  network_interface {
-    type = "utility"
-  }
+
   network_interface {
     type    = "private"
     network = var.private_sdn_network
+  }
+  network_interface {
+    type    = "private"
+    network = var.private_sdn_network_be
   }
   login {
     user = "root"
@@ -64,8 +66,8 @@ resource "upcloud_server" "proxy-server" {
       "pg_md5 --md5auth --username=${var.dbaas_pgsql_username} ${var.dbaas_pgsql_password}",
       "pg_md5 --md5auth --username=${var.dbaas_pgsql_monitor_username} ${var.dbaas_pgsql_monitor_password}",
       "echo \"manager:$(pg_md5 ${var.dbaas_pgsql_default_password})\" >> pcp.conf",
+      "PGPASSWORD=${var.dbaas_pgsql_default_password} /usr/bin/psql -p11569 -U${var.dbaas_pgsql_default_username} -h ${var.dbaas_pgsql_hosts[0]} ${var.dbaas_pgsql_database} -c \"GRANT CREATE ON SCHEMA public TO ${var.dbaas_pgsql_username};\"",
       "systemctl stop pgpool2",
-      "rm /var/log/postgresql/pgpool_status",
       "sleep 10",
       "systemctl enable --now pgpool2"
     ]
